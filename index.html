@@ -530,16 +530,13 @@ const app=createApp({
   function scrollRecordTop(){
    const el=document.getElementById('record-amount');
    if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
-   setTimeout(()=>{
+   const smoothScroll=()=>{
     const page=document.getElementById('page-record');
-    if(page)page.scrollTop=0;
-    window.scrollTo(0,0);
-   },100);
-   setTimeout(()=>{
-    const page=document.getElementById('page-record');
-    if(page)page.scrollTop=0;
-    window.scrollTo(0,0);
-   },600);
+    if(page)page.scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({top:0,behavior:'smooth'});
+   };
+   requestAnimationFrame(()=>requestAnimationFrame(smoothScroll));
+   setTimeout(smoothScroll,600);
   }
   let noteFocused=false;
   function onNoteFocus(){noteFocused=true}
