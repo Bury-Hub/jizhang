@@ -191,6 +191,13 @@ html,body{
  <div class="card mb24">
   <div class="fs13" style="margin-bottom:6px">本月结余</div>
   <div class="amount-xl" :style="{color:monthBalance>=0?'var(--txt)':'var(--red)'}">{{monthBalance<0?'-':''}}¥{{fmt(monthBalance)}}</div>
+  <div v-if="monthBalance>0&&remainingDays>0" style="margin-top:16px;padding:12px 16px;background:var(--card2);border-radius:12px">
+   <div class="flex-between">
+    <span class="fs13">📅 日均可支配</span>
+    <span style="font-size:20px;font-weight:700;color:var(--blue);font-feature-settings:'tnum';font-variant-numeric:tabular-nums">¥{{fmt(dailyBudget)}}</span>
+   </div>
+   <div class="fs12 txt2" style="margin-top:4px">本月剩余 <b>{{remainingDays}}</b> 天 · 结余 / 剩余天数</div>
+  </div>
   <div class="flex-between mt24">
    <div class="mini-stat"><div class="lbl">支出</div><div class="val red">-¥{{fmt(monthSpend)}}</div></div>
    <div class="mini-stat"><div class="lbl">收入</div><div class="val green">+¥{{fmt(monthIncome)}}</div></div>
@@ -617,6 +624,14 @@ const app=createApp({
   const monthSpend=computed(()=>thisMonthTx.value.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0));
   const monthIncome=computed(()=>thisMonthTx.value.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0));
   const monthBalance=computed(()=>monthIncome.value-monthSpend.value);
+  const remainingDays=computed(()=>{
+   const d=new Date();const lastDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+   return lastDay-d.getDate();
+  });
+  const dailyBudget=computed(()=>{
+   const r=remainingDays.value;const b=monthBalance.value;
+   if(r<=0||b<=0)return 0;return b/r;
+  });
   const topCategories=computed(()=>{
    const map=new Map();
    thisMonthTx.value.filter(t=>t.type==='expense').forEach(t=>{const c=categories.value.find(x=>x.id===t.categoryId);if(c){if(!map.has(c.id))map.set(c.id,{name:c.name,color:c.color,total:0});map.get(c.id).total+=t.amount}});
@@ -739,7 +754,7 @@ const app=createApp({
   watch(tab,v=>{if(v==='stats')renderCharts();if(v==='settings')page.value=''});
   onMounted(async()=>{await openDB();await seedIfEmpty();await loadAll()});
 
-  return{tab,page,transactions,categories,accounts,budgets,allTx,currentMonth,monthSpend,monthIncome,monthBalance,topCategories,recentTransactions,
+  return{tab,page,transactions,categories,accounts,budgets,allTx,currentMonth,monthSpend,monthIncome,monthBalance,remainingDays,dailyBudget,topCategories,recentTransactions,
    amountStr,recordType,selCat,selAcctId,recordDate,recordNote,showCatPicker,keys,keyTap,keyStyle,canSave,selectCat,scrollRecordTop,openRecord,saveRecord,
    searchText,showFilter,filterType,filterMin,filterMax,filterDateFrom,filterDateTo,resetFilter,groupedTransactions,
    statMonth,statMonthLabel,prevMonth,nextMonth,statExpense,statIncome,statBalance,statCategories,renderCharts,
