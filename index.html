@@ -256,7 +256,7 @@ html,body{
  </div>
  <div class="form-row">
   <span class="form-row-label">备注</span>
-  <input class="input" v-model="recordNote" placeholder="添加备注..." @blur="scrollRecordTop()" style="flex:1;text-align:right;padding:8px 12px;font-size:15px;-webkit-user-select:text;user-select:text">
+  <input id="record-note" class="input" v-model="recordNote" placeholder="添加备注..." @focus="onNoteFocus" @blur="onNoteBlur" style="flex:1;text-align:right;padding:8px 12px;font-size:15px;-webkit-user-select:text;user-select:text">
  </div>
 
  <div class="key-row" v-for="(row,r) in keys" :key="r" style="margin-top:4px;touch-action:manipulation">
@@ -527,11 +527,34 @@ const app=createApp({
   function keyStyle(k){if(k==='⌫')return{fontSize:'18px',color:'var(--txt2)'};if(k==='.')return{fontWeight:'600'};return{}}
   const canSave=computed(()=>{const v=parseFloat(amountStr.value);return v>0&&selCat.value});
   function selectCat(c){selCat.value=c;showCatPicker.value=false}
-  function scrollRecordTop(){setTimeout(()=>{const el=document.getElementById('page-record');if(el)el.scrollTo({top:0,behavior:'smooth'})},300)}
+  function scrollRecordTop(){
+   const doScroll=()=>{
+    document.getElementById('page-record')?.scrollTo({top:0});
+    window.scrollTo({top:0});
+   };
+   doScroll();
+   setTimeout(doScroll,150);
+   setTimeout(doScroll,400);
+   setTimeout(doScroll,800);
+  }
+  let noteFocused=false;
+  function onNoteFocus(){noteFocused=true}
+  function onNoteBlur(){noteFocused=false;scrollRecordTop()}
+  let vpHandler=null;
   function openRecord(){
    tab.value='record';amountStr.value='';recordType.value='expense';recordNote.value='';recordDate.value=now();
    if(!selCat.value&&categories.value.length)selCat.value=categories.value[0];
    if(!selAcctId.value&&accounts.value.length)selAcctId.value=accounts.value[0].id;
+   noteFocused=false;
+   nextTick(()=>{
+    const noteEl=document.getElementById('record-note');
+    if(noteEl){noteEl.removeEventListener('focus',onNoteFocus);noteEl.addEventListener('focus',onNoteFocus)}
+    if(noteEl){noteEl.removeEventListener('blur',onNoteBlur);noteEl.addEventListener('blur',onNoteBlur)}
+    // iOS visualViewport keyboard detection
+    if(window.visualViewport&&vpHandler){window.visualViewport.removeEventListener('resize',vpHandler)}
+    vpHandler=()=>{if(noteFocused&&window.visualViewport.height>window.innerHeight*0.7){noteFocused=false;scrollRecordTop()}};
+    if(window.visualViewport)window.visualViewport.addEventListener('resize',vpHandler);
+   });
   }
   async function saveRecord(){
    const amt=parseFloat(amountStr.value);if(!amt||!selCat.value)return;
@@ -755,7 +778,7 @@ const app=createApp({
   onMounted(async()=>{await openDB();await seedIfEmpty();await loadAll()});
 
   return{tab,page,transactions,categories,accounts,budgets,allTx,currentMonth,monthSpend,monthIncome,monthBalance,remainingDays,dailyBudget,topCategories,recentTransactions,
-   amountStr,recordType,selCat,selAcctId,recordDate,recordNote,showCatPicker,keys,keyTap,keyStyle,canSave,selectCat,scrollRecordTop,openRecord,saveRecord,
+   amountStr,recordType,selCat,selAcctId,recordDate,recordNote,showCatPicker,keys,keyTap,keyStyle,canSave,selectCat,scrollRecordTop,onNoteFocus,onNoteBlur,openRecord,saveRecord,
    searchText,showFilter,filterType,filterMin,filterMax,filterDateFrom,filterDateTo,resetFilter,groupedTransactions,
    statMonth,statMonthLabel,prevMonth,nextMonth,statExpense,statIncome,statBalance,statCategories,renderCharts,
    showCatEdit,editCatId,editCatName,editCatIcon,editCatColor,emojiList,colorList,editingCatIsDefault,openCatEdit,saveCat,deleteCat,
