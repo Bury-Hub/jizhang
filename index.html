@@ -349,6 +349,7 @@ html,body{
  <div class="card mb16" @click="page='accounts'"><div class="setting-row"><span>💳 账户管理</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
  <div class="card mb16" @click="page='budgets'"><div class="setting-row"><span>🎯 预算管理</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
  <div class="card mb16" @click="exportCSV()"><div class="setting-row"><span>📤 导出 CSV</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
+ <div class="card mb16" @click="triggerImport()"><div class="setting-row"><span>📥 导入 CSV</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
  <div class="card mb16"><div class="setting-row"><span>📊 总记录数</span><span class="tnum txt2">{{allTx.length}} 条</span></div></div>
  <div class="card mb32"><div class="setting-row"><span>版本</span><span class="txt2">1.0</span></div></div>
  <button class="btn btn-red mt20" @click="resetAll()" style="margin-top:8px">清除所有数据</button>
@@ -488,7 +489,23 @@ html,body{
  </div>
 </div>
 
+<div class="modal-overlay" v-if="showImportModal" @click.self="showImportModal=false">
+ <div class="modal-sheet"><div class="grabber"></div><h3 style="text-align:center;margin-bottom:16px;font-size:17px">📥 导入确认</h3>
+  <div style="text-align:center;margin-bottom:20px">
+   <div style="font-size:42px;margin-bottom:8px">📄</div>
+   <div class="fs14" v-if="importFileData">识别到 <b>{{importFileData.count}}</b> 条记录</div>
+   <div class="fs12 txt2" v-if="importFileData">最早日期：{{importFileData.date}}</div>
+   <div class="fs12 txt2" style="margin-top:8px">系统会自动匹配分类和账户<br>未匹配的会自动创建</div>
+  </div>
+  <div style="display:flex;gap:10px">
+   <button class="btn btn-ghost" @click="showImportModal=false" style="flex:1">取消</button>
+   <button class="btn btn-dark" @click="confirmImport()" style="flex:1">确认导入</button>
+  </div>
+ </div>
+</div>
+
 <div class="toast" v-if="toastMsg">{{toastMsg}}</div>
+<input type="file" id="import-file" accept=".csv" @change="handleImportFile($event)" style="display:none">
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -744,6 +761,87 @@ const app=createApp({
    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='记账_导出.csv';a.click();URL.revokeObjectURL(url);toast('导出成功 ✓');
   }
 
+  // Import
+  const showImportModal=ref(false);const importPreview=ref([]);const importFileData=ref(null);
+  function triggerImport(){
+   const input=document.getElementById('import-file');
+   if(input){input.value='';input.click()}
+  }
+  function handleImportFile(e){
+   const file=e.target.files[0];if(!file)return;
+   const reader=new FileReader();
+   reader.onload=ev=>{
+    const text=ev.target.result;
+    const lines=text.split('\n').filter(l=>l.trim());
+    if(lines.length<2){toast('CSV格式错误');return}
+    const header=lines[0];if(!header.includes('日期')||!header.includes('金额')){toast('请使用本App导出的CSV文件');return}
+    const records=[];
+    for(let i=1;i<lines.length;i++){
+     const row=parseCSVLine(lines[i]);if(row.length<3)continue;
+     const date=row[0].trim();
+     const typeStr=row[1].trim();const type=typeStr==='收入'?'income':'expense';
+     const amtStr=row[2].trim().replace(/[^-0-9.]/g,'');
+     const amount=Math.abs(parseFloat(amtStr));if(!amount||isNaN(amount))continue;
+     const catName=row[3]?row[3].trim():'';
+     const acctName=row[4]?row[4].trim():'';
+     const note=row[5]?row[5].trim().replace(/^"|"$/g,''):'';
+     records.push({date,type,amount,catName,acctName,note});
+    }
+    if(!records.length){toast('未识别到有效记录');return}
+    importPreview.value=records;
+    importFileData.value={date:records[0].date,count:records.length};
+    showImportModal.value=true;
+   };
+   reader.readAsText(file,'utf-8');
+  }
+  function parseCSVLine(line){
+   const result=[];let current='',inQuotes=false;
+   for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){inQuotes=!inQuotes}
+    else if(ch===','&&!inQuotes){result.push(current);current=''}
+    else{current+=ch}
+   }
+   result.push(current);return result;
+  }
+  async function confirmImport(){
+   if(!importPreview.value.length)return;
+   const catMap=new Map(categories.value.map(c=>[c.name,c]));
+   const acctMap=new Map(accounts.value.map(a=>[a.name,a]));
+   let newCats=0,newAccts=0,imported=0,skipped=0;
+   for(const r of importPreview.value){
+    // Match or create category
+    let catId=null;
+    if(r.catName&&catMap.has(r.catName)){catId=catMap.get(r.catName).id}
+    else if(r.catName){const nc={id:uid(),name:r.catName,icon:'📌',color:colorList[Math.floor(Math.random()*colorList.length)],isDefault:false,sortOrder:categories.value.length};await put('cat',nc);catId=nc.id;catMap.set(r.catName,nc);newCats++}
+    else{
+     // Find fallback
+     const fc=categories.value[0];if(fc)catId=fc.id;
+    }
+    // Match or create account
+    let acctId=null;
+    if(r.acctName&&acctMap.has(r.acctName)){acctId=acctMap.get(r.acctName).id}
+    else if(r.acctName){const na={id:uid(),name:r.acctName,type:'other',isDefault:false};await put('acct',na);acctId=na.id;acctMap.set(r.acctName,na);newAccts++}
+    else{
+     const fa=accounts.value[0];if(fa)acctId=fa.id;
+    }
+    if(!catId){skipped++;continue}
+    // Check duplicate (same date+type+amount+category+note)
+    const dup=transactions.value.find(t=>t.date===r.date&&t.type===r.type&&Math.abs(t.amount-r.amount)<0.01&&t.categoryId===catId&&(t.note||'')===(r.note||''));
+    if(dup){skipped++;continue}
+    await put('tx',{id:uid(),amount:r.amount,type:r.type,date:r.date,note:r.note,categoryId:catId,accountId:acctId});
+    imported++;
+   }
+   showImportModal.value=false;
+   await loadAll();
+   const parts=[];
+   if(imported>0)parts.push(`导入 ${imported} 条`);
+   if(skipped>0)parts.push(`跳过 ${skipped} 条（重复/异常）`);
+   if(newCats>0)parts.push(`新增 ${newCats} 个分类`);
+   if(newAccts>0)parts.push(`新增 ${newAccts} 个账户`);
+   toast('导入完成：'+parts.join('，'));
+  }
+
   // Reset
   async function resetAll(){
    if(!confirm('确认清除所有数据？此操作不可恢复。'))return;
@@ -786,7 +884,7 @@ const app=createApp({
    showAcctEdit,editAcctId,editAcctName,editAcctType,accountTypes,editingAcctIsDefault,accountTypeName,openAcctEdit,saveAcct,deleteAcct,
    budgetMonth,budgetMonthLabel,showBudgetModal,budgetCat,budgetAmount,getBudget,setBudget,saveBudget,
    showTxEdit,editTxId,editTxType,editTxAmount,editTxCatId,editTxDate,editTxAcctId,editTxNote,editTx,saveTxEdit,deleteTx,
-   swipeStart,swipeEnd,exportCSV,resetAll,fmt,now,toastMsg};
+   swipeStart,swipeEnd,exportCSV,triggerImport,handleImportFile,showImportModal,importPreview,importFileData,confirmImport,resetAll,fmt,now,toastMsg};
  }
 });
 app.mount('#app');
