@@ -41,7 +41,7 @@ html,body{
 .page{
   flex:1;
   padding:calc(12px + var(--safe-top)) 20px 20px 20px;
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overflow-y:auto;
   padding-bottom:calc(80px + var(--safe-bottom));
 }
 .page::-webkit-scrollbar{display:none}
@@ -227,7 +227,7 @@ html,body{
 <!-- ═══ RECORD ═══ -->
 <div class="page" v-show="tab==='record'" id="page-record">
  <div style="text-align:center;padding:12px 0 24px">
-  <div style="font-size:40px;font-weight:700;letter-spacing:-1px" :style="{color:recordType==='expense'?'var(--red)':'var(--green)'}">¥{{amountStr||'0'}}</div>
+  <div id="record-amount" style="font-size:40px;font-weight:700;letter-spacing:-1px" :style="{color:recordType==='expense'?'var(--red)':'var(--green)'}">¥{{amountStr||'0'}}</div>
  </div>
  <div style="display:flex;justify-content:center;margin-bottom:20px">
   <div class="type-toggle" style="width:200px">
@@ -528,14 +528,18 @@ const app=createApp({
   const canSave=computed(()=>{const v=parseFloat(amountStr.value);return v>0&&selCat.value});
   function selectCat(c){selCat.value=c;showCatPicker.value=false}
   function scrollRecordTop(){
-   const doScroll=()=>{
-    document.getElementById('page-record')?.scrollTo({top:0});
-    window.scrollTo({top:0});
-   };
-   doScroll();
-   setTimeout(doScroll,150);
-   setTimeout(doScroll,400);
-   setTimeout(doScroll,800);
+   const el=document.getElementById('record-amount');
+   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+   setTimeout(()=>{
+    const page=document.getElementById('page-record');
+    if(page)page.scrollTop=0;
+    window.scrollTo(0,0);
+   },100);
+   setTimeout(()=>{
+    const page=document.getElementById('page-record');
+    if(page)page.scrollTop=0;
+    window.scrollTo(0,0);
+   },600);
   }
   let noteFocused=false;
   function onNoteFocus(){noteFocused=true}
