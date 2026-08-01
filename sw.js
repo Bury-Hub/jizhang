@@ -1,4 +1,4 @@
-const CACHE_NAME='jizhang-v1';
+const CACHE_NAME='jizhang-v2';
 const ASSETS=['./index.html','./manifest.json'];
 
 self.addEventListener('install',e=>{
@@ -11,6 +11,16 @@ self.addEventListener('activate',e=>{
  self.clients.claim();
 });
 
+// Network-first: always try network, fallback to cache
 self.addEventListener('fetch',e=>{
- e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+ e.respondWith(
+  fetch(e.request).then(r=>{
+   // Update cache with fresh response
+   if(r.status===200){
+    const clone=r.clone();
+    caches.open(CACHE_NAME).then(c=>c.put(e.request,clone));
+   }
+   return r;
+  }).catch(()=>caches.match(e.request))
+ );
 });
