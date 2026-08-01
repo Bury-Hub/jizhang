@@ -218,7 +218,7 @@ html,body{
 </div>
 
 <!-- ═══ RECORD ═══ -->
-<div class="page" v-show="tab==='record'">
+<div class="page" v-show="tab==='record'" id="page-record">
  <div style="text-align:center;padding:12px 0 24px">
   <div style="font-size:40px;font-weight:700;letter-spacing:-1px" :style="{color:recordType==='expense'?'var(--red)':'var(--green)'}">¥{{amountStr||'0'}}</div>
  </div>
@@ -249,10 +249,10 @@ html,body{
  </div>
  <div class="form-row">
   <span class="form-row-label">备注</span>
-  <input class="input" v-model="recordNote" placeholder="添加备注..." style="flex:1;text-align:right;padding:8px 12px;font-size:15px">
+  <input class="input" v-model="recordNote" placeholder="添加备注..." @focus="scrollRecordTop()" style="flex:1;text-align:right;padding:8px 12px;font-size:15px;-webkit-user-select:text;user-select:text">
  </div>
 
- <div class="key-row" v-for="(row,r) in keys" :key="r" style="margin-top:4px;touch-action:manipulation" @touchmove.prevent>
+ <div class="key-row" v-for="(row,r) in keys" :key="r" style="margin-top:4px;touch-action:manipulation">
   <button class="key" v-for="(k,c) in row" @click="keyTap(k)" :style="keyStyle(k)">{{k}}</button>
  </div>
  <button class="btn btn-dark mt24" @click="saveRecord()" :disabled="!canSave" :style="{opacity:canSave?1:.35}">保存</button>
@@ -520,6 +520,7 @@ const app=createApp({
   function keyStyle(k){if(k==='⌫')return{fontSize:'18px',color:'var(--txt2)'};if(k==='.')return{fontWeight:'600'};return{}}
   const canSave=computed(()=>{const v=parseFloat(amountStr.value);return v>0&&selCat.value});
   function selectCat(c){selCat.value=c;showCatPicker.value=false}
+  function scrollRecordTop(){nextTick(()=>{const el=document.getElementById('page-record');if(el)el.scrollTo({top:0,behavior:'smooth'})})}
   function openRecord(){
    tab.value='record';amountStr.value='';recordType.value='expense';recordNote.value='';recordDate.value=now();
    if(!selCat.value&&categories.value.length)selCat.value=categories.value[0];
@@ -739,7 +740,7 @@ const app=createApp({
   onMounted(async()=>{await openDB();await seedIfEmpty();await loadAll()});
 
   return{tab,page,transactions,categories,accounts,budgets,allTx,currentMonth,monthSpend,monthIncome,monthBalance,topCategories,recentTransactions,
-   amountStr,recordType,selCat,selAcctId,recordDate,recordNote,showCatPicker,keys,keyTap,keyStyle,canSave,selectCat,openRecord,saveRecord,
+   amountStr,recordType,selCat,selAcctId,recordDate,recordNote,showCatPicker,keys,keyTap,keyStyle,canSave,selectCat,scrollRecordTop,openRecord,saveRecord,
    searchText,showFilter,filterType,filterMin,filterMax,filterDateFrom,filterDateTo,resetFilter,groupedTransactions,
    statMonth,statMonthLabel,prevMonth,nextMonth,statExpense,statIncome,statBalance,statCategories,renderCharts,
    showCatEdit,editCatId,editCatName,editCatIcon,editCatColor,emojiList,colorList,editingCatIsDefault,openCatEdit,saveCat,deleteCat,
