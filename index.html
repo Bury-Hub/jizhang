@@ -543,7 +543,7 @@ const app=createApp({
   }
   let noteFocused=false;
   function onNoteFocus(){noteFocused=true}
-  function onNoteBlur(){noteFocused=false;scrollRecordTop()}
+  function onNoteBlur(){nextTick(()=>{scrollRecordTop()});setTimeout(()=>{noteFocused=false},1200)}
   let vpHandler=null;
   function openRecord(){
    tab.value='record';amountStr.value='';recordType.value='expense';recordNote.value='';recordDate.value=now();
