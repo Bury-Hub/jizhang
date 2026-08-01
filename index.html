@@ -189,7 +189,7 @@ html,body{
 
  <div class="card mb24">
   <div class="fs13" style="margin-bottom:6px">本月结余</div>
-  <div class="amount-xl" :style="{color:monthBalance>=0?'var(--txt)':'var(--red)'}">¥{{fmt(monthBalance)}}</div>
+  <div class="amount-xl" :style="{color:monthBalance>=0?'var(--txt)':'var(--red)'}">{{monthBalance<0?'-':''}}¥{{fmt(monthBalance)}}</div>
   <div class="flex-between mt24">
    <div class="mini-stat"><div class="lbl">支出</div><div class="val red">-¥{{fmt(monthSpend)}}</div></div>
    <div class="mini-stat"><div class="lbl">收入</div><div class="val green">+¥{{fmt(monthIncome)}}</div></div>
@@ -336,7 +336,7 @@ html,body{
 </div>
 
 <!-- ═══ SETTINGS ═══ -->
-<div class="page" v-show="tab==='settings'">
+<div class="page" v-show="tab==='settings'&&page===''">
  <div class="card mb16" @click="page='categories'"><div class="setting-row"><span>📂 分类管理</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
  <div class="card mb16" @click="page='accounts'"><div class="setting-row"><span>💳 账户管理</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
  <div class="card mb16" @click="page='budgets'"><div class="setting-row"><span>🎯 预算管理</span><span style="color:var(--txt3);font-size:18px">›</span></div></div>
@@ -347,7 +347,7 @@ html,body{
 </div>
 
 <!-- ═══ SUB PAGE: CATEGORIES ═══ -->
-<div class="page" v-show="tab==='page'&&page==='categories'">
+<div class="page" v-show="tab==='settings'&&page==='categories'">
  <div class="flex-between mb20">
   <button class="btn btn-ghost" style="width:auto;padding:10px 20px;font-size:15px" @click="page=''">← 返回</button>
   <button class="btn btn-blue" style="width:auto;padding:10px 20px;font-size:15px" @click="openCatEdit()">＋ 新建</button>
@@ -360,7 +360,7 @@ html,body{
 </div>
 
 <!-- ═══ SUB PAGE: ACCOUNTS ═══ -->
-<div class="page" v-show="tab==='page'&&page==='accounts'">
+<div class="page" v-show="tab==='settings'&&page==='accounts'">
  <div class="flex-between mb20">
   <button class="btn btn-ghost" style="width:auto;padding:10px 20px;font-size:15px" @click="page=''">← 返回</button>
   <button class="btn btn-blue" style="width:auto;padding:10px 20px;font-size:15px" @click="openAcctEdit()">＋ 新建</button>
@@ -372,7 +372,7 @@ html,body{
 </div>
 
 <!-- ═══ SUB PAGE: BUDGETS ═══ -->
-<div class="page" v-show="tab==='page'&&page==='budgets'">
+<div class="page" v-show="tab==='settings'&&page==='budgets'">
  <div class="flex-between mb20">
   <button class="btn btn-ghost" style="width:auto;padding:10px 20px;font-size:15px" @click="page=''">← 返回</button>
  </div>
@@ -483,6 +483,7 @@ html,body{
 <div class="toast" v-if="toastMsg">{{toastMsg}}</div>
 </div>
 
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
 // ─── INDEXEDDB ────
 const DB_NAME='jizhang';let db;
@@ -749,6 +750,5 @@ const app=createApp({
 });
 app.mount('#app');
 </script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </body>
 </html>
